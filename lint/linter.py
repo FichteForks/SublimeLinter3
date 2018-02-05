@@ -915,46 +915,42 @@ class Linter(metaclass=LinterMeta):
         if self.disabled:
             return []
 
-        # Update logger for potentially changed file_name.
-        self.logger = sl_logging.getLinterLogger(self)
-
-        with sl_logging.logger_context(self.logger):
-            # `cmd = None` is a special API signal, that the plugin author
-            # implemented its own `run`
-            if self.cmd is None:
-                output = self.run(None, code)
-            else:
-                cmd = self.get_cmd()
-                if not cmd:  # We couldn't find a executable
-                    return []
-                output = self.run(cmd, code)
-
-            if not output:
+        # `cmd = None` is a special API signal, that the plugin author
+        # implemented its own `run`
+        if self.cmd is None:
+            output = self.run(None, code)
+        else:
+            cmd = self.get_cmd()
+            if not cmd:  # We couldn't find a executable
                 return []
+            output = self.run(cmd, code)
 
-            # If the view has been modified since the lint was triggered, no point in continuing.
-            if hit_time and persist.last_hit_times.get(self.view.id(), 0) > hit_time:
-                return None  # ABORT
+        if not output:
+            return []
 
-            if self.logger.isEnabledFor(logging.DEBUG):
-                import textwrap
-                stripped_output = output.replace('\r', '').rstrip()
-                self.logger.debug('output:\n' + textwrap.indent(stripped_output, '    '))
+        # If the view has been modified since the lint was triggered, no point in continuing.
+        if hit_time and persist.last_hit_times.get(self.view.id(), 0) > hit_time:
+            return None  # ABORT
 
-            errors = []
-            vv = VirtualView(code)
-            for m in self.find_errors(output):
-                if not m or not m[0]:
-                    continue
+        if self.logger.isEnabledFor(logging.DEBUG):
+            import textwrap
+            stripped_output = output.replace('\r', '').rstrip()
+            self.logger.debug('output:\n' + textwrap.indent(stripped_output, '    '))
 
-                if not isinstance(m, LintMatch):  # ensure right type
-                    m = LintMatch(*m)
+        errors = []
+        vv = VirtualView(code)
+        for m in self.find_errors(output):
+            if not m or not m[0]:
+                continue
 
-                if m.message and m.line is not None:
-                    error = self.process_match(m, vv)
-                    errors.append(error)
+            if not isinstance(m, LintMatch):  # ensure right type
+                m = LintMatch(*m)
 
-            return errors
+            if m.message and m.line is not None:
+                error = self.process_match(m, vv)
+                errors.append(error)
+
+        return errors
 
     def find_errors(self, output):
         """

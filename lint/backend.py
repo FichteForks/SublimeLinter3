@@ -7,7 +7,7 @@ from functools import partial
 import os
 import traceback
 
-from . import persist, util
+from . import persist, util, logging
 
 
 WILDCARD_SYNTAX = '*'
@@ -48,7 +48,9 @@ def lint_view(view, hit_time, callback):
 
 
 def execute_lint_task(linter, code, offset, hit_time):
-    errors = linter.lint(code, hit_time) or []
+    logger = sl_logging.getLinterLogger(linter)
+    with logging.logger_context(logger):
+        errors = linter.lint(code, hit_time) or []
     translate_lineno_and_column(errors, offset)
 
     return errors
