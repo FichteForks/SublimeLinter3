@@ -3,13 +3,13 @@ from distutils.versionpredicate import VersionPredicate
 from functools import lru_cache
 from numbers import Number
 
-import logging
+import logging as py_logging
 import os
 import re
 import shlex
 import sublime
 
-from . import highlight, persist, util, logging as sl_logging
+from . import highlight, persist, util, logging
 from .const import STATUS_KEY, WARNING, ERROR
 
 ARG_RE = re.compile(r'(?P<prefix>@|--?)?(?P<name>[@\w][\w\-]*)(?:(?P<joiner>[=:])(?:(?P<sep>.)(?P<multiple>\+)?)?)?')
@@ -102,7 +102,7 @@ class LinterMeta(type):
 
         Finally, the class is registered as a linter for its configured syntax.
         """
-        cls_logger = sl_logging.getLinterClsLogger(cls)
+        cls_logger = logging.getLinterClsLogger(cls)
         setattr(cls, 'cls_logger', cls_logger)
 
         if bases:
@@ -414,7 +414,6 @@ class Linter(metaclass=LinterMeta):
     def __init__(self, view, syntax):  # noqa: D107
         self.view = view
         self.syntax = syntax
-        self.logger = sl_logging.getLinterLogger(self)
         # Using `self.env` is deprecated, bc it can have surprising
         # side-effects for concurrent/async linting. We initialize it here
         # bc some ruby linters rely on that behavior.
@@ -495,13 +494,13 @@ class Linter(metaclass=LinterMeta):
         if project_folder:
             variables['folder'] = project_folder
 
-        if self.logger.isEnabledFor(logging.DEBUG):
+        if logging.isEnabledFor(py_logging.DEBUG):
             # Only print the non-deterministic variables
             vars_to_print = ('file', 'project', 'folder')
             filtered_variables = {k: v for k, v in variables.items() if k in vars_to_print}
             import pprint
             text = pprint.pformat(dict(filtered_variables), indent=4)
-            self.logger.debug('Selected variables:\n%s', text)
+            logging.debug('Selected variables:\n%s', text)
         return recursive_replace(variables, settings)
 
     @staticmethod
@@ -677,7 +676,7 @@ class Linter(metaclass=LinterMeta):
             path = self.which(which)
 
         if not path:
-            self.logger.warning('WARNING: cannot locate \'%s\'', which)
+            logging.warning('WARNING: cannot locate \'%s\'', which)
             return None
 
         cmd[0:1] = util.convert_type(path, [])
@@ -701,11 +700,11 @@ class Linter(metaclass=LinterMeta):
         settings = self.get_view_settings()
         executable = settings.get('executable', None)
         if executable:
-            self.logger.debug("wanted executable is '%s'", executable)
+            logging.debug("wanted executable is '%s'", executable)
 
             # If `executable` is an iterable, we can only assume it will work.
             if isinstance(executable, str) and not util.can_exec(executable):
-                self.logger.error("ERROR: deactivated; cannot locate '%s'", executable)
+                logging.error("ERROR: deactivated; cannot locate '%s'", executable)
                 # no fallback, the user specified something, so we err
                 return True, None
 
@@ -885,7 +884,7 @@ class Linter(metaclass=LinterMeta):
             if os.path.isdir(cwd):
                 return cwd
             else:
-                self.logger.warning("WARNING: wanted working_dir '%s' is not a directory", cwd)
+                logging.warning("WARNING: wanted working_dir '%s' is not a directory", cwd)
                 return None
 
         return self._guess_project_path(self.view.window(), self.view.file_name())
@@ -932,10 +931,10 @@ class Linter(metaclass=LinterMeta):
         if hit_time and persist.last_hit_times.get(self.view.id(), 0) > hit_time:
             return None  # ABORT
 
-        if self.logger.isEnabledFor(logging.DEBUG):
+        if logging.isEnabledFor(py_logging.DEBUG):
             import textwrap
             stripped_output = output.replace('\r', '').rstrip()
-            self.logger.debug('output:\n' + textwrap.indent(stripped_output, '    '))
+            logging.debug('output:\n' + textwrap.indent(stripped_output, '    '))
 
         errors = []
         vv = VirtualView(code)
@@ -963,7 +962,7 @@ class Linter(metaclass=LinterMeta):
         if self.multiline:
             matches = list(self.regex.finditer(output))
             if not matches:
-                self.logger.debug('No matches for regex: %s', self.regex.pattern)
+                logging.debug('No matches for regex: %s', self.regex.pattern)
                 return
 
             for match in matches:
@@ -974,7 +973,7 @@ class Linter(metaclass=LinterMeta):
                 if match:
                     yield self.split_match(match)
                 else:
-                    self.logger.debug("No match for line: %r", line)
+                    logging.debug("No match for line: %r", line)
 
     def split_match(self, match):
         """
@@ -1315,9 +1314,9 @@ class Linter(metaclass=LinterMeta):
         cwd = self.get_working_dir(settings)
         env = self.get_environment(settings)
 
-        self.logger.debug('cmd: %s', cmd)
+        logging.debug('cmd: %s', cmd)
         if cwd:
-            self.logger.debug('cwd: %s', cwd)
+            logging.debug('cwd: %s', cwd)
 
         return util.communicate(
             cmd,
@@ -1332,9 +1331,9 @@ class Linter(metaclass=LinterMeta):
         cwd = self.get_working_dir(settings)
         env = self.get_environment(settings)
 
-        self.logger.debug('cmd: %s', cmd)
+        logging.debug('cmd: %s', cmd)
         if cwd:
-            self.logger.debug('cwd: %s', cwd)
+            logging.debug('cwd: %s', cwd)
 
         return util.tmpfile(
             cmd,

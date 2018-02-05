@@ -113,5 +113,6 @@ def get_current_logger():
 #     get_current_logger().debug(*args, **kwargs)
 
 # Create thread-aware logging functions
-for func_name in ('critical', 'exception', 'error', 'warning', 'info', 'debug'):
+func_names = ('critical', 'exception', 'error', 'warning', 'info', 'debug', 'isEnabledFor')
+for func_name in func_names:
     globals()[func_name] = lambda *a, **kw: getattr(get_current_logger(), func_name)(*a, **kw)

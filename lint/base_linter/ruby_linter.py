@@ -7,7 +7,7 @@ import sublime
 
 from functools import lru_cache
 
-from .. import linter, util
+from .. import linter, util, logging
 
 CMD_RE = re.compile(r'(?P<gem>.+?)@ruby')
 
@@ -80,7 +80,7 @@ class RubyLinter(linter.Linter):
             ruby = util.which('jruby')
 
         if not rbenv and not ruby:
-            self.logger.warning('WARNING: deactivated; cannot locate ruby, rbenv or rvm-auto-ruby')
+            logging.warning('WARNING: deactivated; cannot locate ruby, rbenv or rvm-auto-ruby')
             return True, None
 
         if isinstance(cmd, str):
@@ -108,7 +108,7 @@ class RubyLinter(linter.Linter):
                 else:
                     ruby_cmd = [ruby, gem_path]
             else:
-                self.logger.warning('WARNING: deactivated; cannot locate the gem %r', gem)
+                logging.warning('WARNING: deactivated; cannot locate the gem %r', gem)
                 return True, None
         else:
             ruby_cmd = [ruby]

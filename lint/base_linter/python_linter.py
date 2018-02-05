@@ -68,7 +68,7 @@ class PythonLinter(linter.Linter):
         # point to a python environment, NOT a python binary.
         python = settings.get('python', None)
 
-        self.logger.debug("wanted python is '%s'", python)
+        logging.debug("wanted python is '%s'", python)
 
         cmd_name = cmd[0] if isinstance(cmd, (list, tuple)) else cmd
 
@@ -78,7 +78,7 @@ class PythonLinter(linter.Linter):
                     python, cmd_name
                 )
                 if not executable:
-                    self.logger.warning(
+                    logging.warning(
                         "WARNING: deactivated; cannot locate %r "
                         "for given python %r",
                         cmd_name, python
@@ -94,14 +94,14 @@ class PythonLinter(linter.Linter):
                 )
 
                 if executable is None:
-                    self.logger.warning(
+                    logging.warning(
                         "WARNING: deactivated; cannot locate %r "
                         "for given python %r",
                         cmd_name, python
                     )
                     return True, None
 
-                self.logger.debug("Using '%s' for given python %r", executable, python)
+                logging.debug("Using '%s' for given python %r", executable, python)
                 return True, executable
 
         # If we're here the user didn't specify anything. This is the default
@@ -109,18 +109,18 @@ class PythonLinter(linter.Linter):
         cwd = self.get_working_dir(settings)
         executable = ask_pipenv(cmd[0], cwd)
         if executable:
-            self.logger.debug("Using '%s' according to pipenv", executable)
+            logging.debug("Using '%s' according to pipenv", executable)
             return True, executable
 
         # Should we try a `pyenv which` as well? Problem: I don't have it,
         # it's MacOS only.
 
-        self.logger.debug("trying to use globally installed %r", cmd_name)
+        logging.debug("trying to use globally installed %r", cmd_name)
         # fallback, similiar to a which(cmd)
         executable = util.which(cmd_name)
         if executable is None:
-            self.logger.warning("WARNING: cannot locate excecutable."
-                                " Fill in the 'python' or 'executable' setting.")
+            logging.warning("WARNING: cannot locate excecutable."
+                            " Fill in the 'python' or 'executable' setting.")
         return True, executable
 
 
