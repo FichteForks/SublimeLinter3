@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from functools import partial
 import logging
 import os
 import threading
@@ -89,30 +90,11 @@ def get_current_logger():
     return logger
 
 
-# def critical(*args, **kwargs):
-#     get_current_logger().critical(*args, **kwargs)
+def _wrapper(func_name, *args, **kwargs):
+    return getattr(get_current_logger(), func_name)(*args, **kwargs)
 
-
-# def exception(*args, **kwargs):
-#     get_current_logger().exception(*args, **kwargs)
-
-
-# def error(*args, **kwargs):
-#     get_current_logger().exception(*args, **kwargs)
-
-
-# def warning(*args, **kwargs):
-#     get_current_logger().warning(*args, **kwargs)
-
-
-# def info(*args, **kwargs):
-#     get_current_logger().info(*args, **kwargs)
-
-
-# def debug(*args, **kwargs):
-#     get_current_logger().debug(*args, **kwargs)
 
 # Create thread-aware logging functions
 func_names = ('critical', 'exception', 'error', 'warning', 'info', 'debug', 'isEnabledFor')
 for func_name in func_names:
-    globals()[func_name] = lambda *a, **kw: getattr(get_current_logger(), func_name)(*a, **kw)
+    globals()[func_name] = partial(_wrapper, func_name)
