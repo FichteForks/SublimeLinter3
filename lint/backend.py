@@ -5,6 +5,7 @@ from fnmatch import fnmatch
 from itertools import chain, count
 from functools import partial
 import os
+import threading
 import traceback
 
 from . import persist, util, logging
@@ -13,6 +14,7 @@ from . import persist, util, logging
 WILDCARD_SYNTAX = '*'
 
 task_counter = count(start=1)
+task_counter_lock = threading.Lock()
 
 
 def lint_view(view, hit_time, callback):
@@ -37,10 +39,13 @@ def lint_view(view, hit_time, callback):
     linters = get_linters(view)
     lint_tasks = get_lint_tasks(linters, view)
 
-    results = run_concurrently(
-        partial(execute_lint_task, *task, hit_time=hit_time, task_id=next(task_counter))
-        for task in lint_tasks)
+    with task_counter_lock:
+        task_executors = [
+            partial(execute_lint_task, *task, hit_time=hit_time, task_id=next(task_counter))
+            for task in lint_tasks
+        ]
 
+    results = run_concurrently(task_executors)
     all_errors = chain.from_iterable(results)
 
     # We don't want to guarantee that our consumers/views are thread aware.
