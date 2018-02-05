@@ -2,7 +2,7 @@ import sublime
 
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 from fnmatch import fnmatch
-from itertools import chain
+from itertools import chain, count
 from functools import partial
 import os
 import traceback
@@ -11,6 +11,8 @@ from . import persist, util, logging
 
 
 WILDCARD_SYNTAX = '*'
+
+task_counter = count(start=1)
 
 
 def lint_view(view, hit_time, callback):
@@ -36,7 +38,7 @@ def lint_view(view, hit_time, callback):
     lint_tasks = get_lint_tasks(linters, view)
 
     results = run_concurrently(
-        partial(execute_lint_task, *task, hit_time=hit_time)
+        partial(execute_lint_task, *task, hit_time=hit_time, task_id=next(task_counter))
         for task in lint_tasks)
 
     all_errors = chain.from_iterable(results)
@@ -47,8 +49,8 @@ def lint_view(view, hit_time, callback):
     sublime.set_timeout_async(partial(callback, view, list(all_errors), hit_time))
 
 
-def execute_lint_task(linter, code, offset, hit_time):
-    logger = sl_logging.getLinterLogger(linter)
+def execute_lint_task(linter, code, offset, hit_time, task_id):
+    logger = logging.getLinterLogger(linter, task_id)
     with logging.logger_context(logger):
         errors = linter.lint(code, hit_time) or []
     translate_lineno_and_column(errors, offset)

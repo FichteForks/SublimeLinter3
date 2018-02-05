@@ -52,13 +52,13 @@ def getLinterClsLogger(linter_cls):
     return _build_logger(name, fmt, propagate=False)
 
 
-def getLinterLogger(linter):
+def getLinterLogger(linter, task_id=None):
     linter_name = linter.name
     file_path = linter.view.file_name() or "<untitled {}>".format(linter.view.buffer_id())
     file_name = os.path.basename(file_path)
 
     name = "{}.{}.{}".format(NAMESPACE, linter_name, linter.view.id())
-    fmt = "{}[{}] ({}) {}".format(BASE_PREFIX, linter_name, file_name, BASE_FORMAT)
+    fmt = "{}#{} [{}] ({}) {}".format(BASE_PREFIX, task_id, linter_name, file_name, BASE_FORMAT)
     return _build_logger(name, fmt, propagate=False)
 
 
